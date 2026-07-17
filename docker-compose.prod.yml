@@ -1,0 +1,42 @@
+# ─────────────────────────────────────────────────────────────
+# PROD MODE — optimized build + AWS RDS
+# Usage: make prod   OR   docker-compose -f docker-compose.prod.yml up --build -d
+# ─────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  backend:
+    build:
+      context: ./backend
+      target: production           # node (no nodemon), prod deps only
+    container_name: pos_backend
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./backend/.env             # RDS credentials + JWT_SECRET
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: production           # vite build → nginx
+    container_name: pos_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────────────────────────
+# DEV MODE — hot reload + local PostgreSQL
+# Usage: make dev   OR   docker-compose up --build
+# ─────────────────────────────────────────────────────────────
+
+version: '3.8'
+
+services:
+
+  db:
+    image: postgres:15-alpine
+    container_name: pos_db
+    environment:
+      POSTGRES_DB: pos_checker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: localpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      target: development          # uses nodemon
+    container_name: pos_backend
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend/src:/app/src     # hot reload
+    env_file:
+      - ./backend/.env             # load .env first
+    environment:                   # these override .env if duplicated
+      NODE_ENV: development
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: pos_checker
+      DB_USER: postgres
+      DB_PASSWORD: localpassword
+      JWT_SECRET: dev_secret_not_for_prod
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development          # uses vite dev server
+    container_name: pos_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src    # hot reload
+    environment:
+      VITE_API_TARGET: http://backend:3001
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
