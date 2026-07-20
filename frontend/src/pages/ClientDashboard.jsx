@@ -1,74 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  ResponsiveContainer, BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+} from 'recharts';
 import api from '../api/axios';
 import { useTheme } from '../context/ThemeContext';
-
-// Icons
-const MonitorIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z"/>
-  </svg>
-);
-const LogoutIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/>
-  </svg>
-);
-const CopyIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
-  </svg>
-);
-const CheckIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4.5 12.75l6 6 9-13.5"/>
-  </svg>
-);
-const RefreshIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
-  </svg>
-);
-const ChevronLeftIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15.75 19.5L8.25 12l7.5-7.5"/>
-  </svg>
-);
-const ChevronRightIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-  </svg>
-);
-const ChevronUpIcon = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4.5 15.75l7.5-7.5 7.5 7.5"/>
-  </svg>
-);
-const ChevronDownIcon = () => (
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-  </svg>
-);
-const KeyIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
-  </svg>
-);
-const SunIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
-  </svg>
-);
-const MoonIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
-  </svg>
-);
-const InboxIcon = () => (
-  <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z"/>
-  </svg>
-);
+import {
+  MonitorIcon, LogoutIcon, RefreshIcon,
+  ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon,
+  SunIcon, MoonIcon, InboxIcon, SettingsIcon,
+} from '../components/icons';
 
 // Stat card data
 const STAT_ACCENT = [
@@ -77,45 +19,156 @@ const STAT_ACCENT = [
   { color: '#8B5CF6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.18)' },
 ];
 
+const tableLabel = (type) => (type || '').replace(/^table_sync:/, '') || 'Données';
+
+const loadSelectedTables = () => {
+  try { return JSON.parse(localStorage.getItem('selectedTables') || '[]'); }
+  catch { return []; }
+};
+
+const formatCellValue = (v) => {
+  if (v === null || v === undefined || v === '') return '—';
+  if (typeof v === 'boolean') return v ? 'Oui' : 'Non';
+  if (typeof v === 'object') return JSON.stringify(v);
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(v)) {
+    const d = new Date(v);
+    if (!isNaN(d)) return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  return String(v);
+};
+
+// Renders an array of row-objects as a real table instead of raw JSON;
+// falls back to raw JSON when the shape isn't a plain object array.
+function DataRowsTable({ rows, T }) {
+  const isRenderable = Array.isArray(rows) && rows.length > 0
+    && typeof rows[0] === 'object' && rows[0] !== null && !Array.isArray(rows[0]);
+
+  if (!isRenderable) {
+    return (
+      <pre style={{
+        background: T.surface, border: `1px solid ${T.border}`,
+        borderRadius: 8, padding: '12px 14px',
+        fontSize: 12, color: T.muted, overflow: 'auto',
+        lineHeight: 1.6, marginTop: 2,
+      }}>
+        {JSON.stringify(rows, null, 2)}
+      </pre>
+    );
+  }
+
+  const columns = Object.keys(rows[0]);
+
+  return (
+    <div style={{ overflowX: 'auto', border: `1px solid ${T.border}`, borderRadius: 8 }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <thead>
+          <tr style={{ background: T.bg }}>
+            {columns.map((c) => (
+              <th key={c} style={{
+                textAlign: 'left', padding: '7px 10px', fontWeight: 600,
+                color: T.subtle, borderBottom: `1px solid ${T.border}`, whiteSpace: 'nowrap',
+              }}>{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} style={{ background: i % 2 === 1 ? T.bg : 'transparent' }}>
+              {columns.map((c) => (
+                <td key={c} style={{
+                  padding: '6px 10px', color: T.muted, borderBottom: `1px solid ${T.border}`,
+                  whiteSpace: 'nowrap', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>
+                  {formatCellValue(row[c])}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function ClientDashboard() {
   const navigate = useNavigate();
   const { T, dark, toggle } = useTheme();
   const accentClient = T.accentClient;
   const username = localStorage.getItem('username');
-  const apiKey = localStorage.getItem('api_key');
   const [stats, setStats] = useState({ total_records: 0, today_records: 0, last_sync: null });
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
-  const [keyCopied, setKeyCopied] = useState(false);
   const limit = 20;
+
+  // Which tables to show — configured in Settings, just read here.
+  const [selectedTables] = useState(loadSelectedTables);
+
+  const [tables, setTables] = useState([]);
+  const [tablesLoading, setTablesLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'chart'
+  const [timeline, setTimeline] = useState([]);
+  const [timelineLoading, setTimelineLoading] = useState(true);
+
+  const loadTables = useCallback(async () => {
+    setTablesLoading(true);
+    try {
+      const res = await api.get('/client/tables');
+      setTables(res.data);
+    } catch { /* interceptor handles 401 */ }
+    finally { setTablesLoading(false); }
+  }, []);
+
+  useEffect(() => { loadTables(); }, [loadTables]);
 
   const loadData = useCallback(async (p = 1) => {
     setLoading(true);
     try {
+      const params = new URLSearchParams({ page: p, limit });
+      if (selectedTables.length > 0) params.set('tables', selectedTables.join(','));
+      if (dateFrom) params.set('from', dateFrom);
+      if (dateTo) params.set('to', `${dateTo}T23:59:59.999`);
+
       const [statsRes, dataRes] = await Promise.all([
         api.get('/client/stats'),
-        api.get(`/client/dashboard?page=${p}&limit=${limit}`),
+        api.get(`/client/dashboard?${params.toString()}`),
       ]);
       setStats(statsRes.data);
       setRecords(dataRes.data.data);
       setTotal(dataRes.data.total);
     } catch { /* interceptor handles 401 */ }
     finally { setLoading(false); }
-  }, []);
+  }, [selectedTables, dateFrom, dateTo]);
 
   useEffect(() => { loadData(page); }, [page, loadData]);
 
-  const logout = () => { localStorage.clear(); navigate('/login'); };
+  // Date changes reset to page 1 (loadData above re-runs via the loadData/page effect)
+  useEffect(() => { setPage(1); }, [dateFrom, dateTo]);
 
-  const copyKey = async () => {
-    try { await navigator.clipboard.writeText(apiKey); }
-    catch { const el = document.createElement('textarea'); el.value = apiKey; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); }
-    setKeyCopied(true);
-    setTimeout(() => setKeyCopied(false), 2000);
-  };
+  const loadTimeline = useCallback(async () => {
+    setTimelineLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedTables.length > 0) params.set('tables', selectedTables.join(','));
+      if (dateFrom) params.set('from', dateFrom);
+      if (dateTo) params.set('to', `${dateTo}T23:59:59.999`);
+      const res = await api.get(`/client/timeline?${params.toString()}`);
+      setTimeline(res.data);
+    } catch { /* interceptor handles 401 */ }
+    finally { setTimelineLoading(false); }
+  }, [selectedTables, dateFrom, dateTo]);
+
+  useEffect(() => { loadTimeline(); }, [loadTimeline]);
+
+  const chartTables = selectedTables.length > 0
+    ? tables.filter((t) => selectedTables.includes(t.table_name))
+    : [...tables].sort((a, b) => b.sync_count - a.sync_count).slice(0, 12);
+
+  const logout = () => { localStorage.clear(); navigate('/login'); };
 
   const totalPages = Math.ceil(total / limit);
 
@@ -152,6 +205,18 @@ export default function ClientDashboard() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 13, color: T.muted, marginRight: 6 }}>{username}</span>
+          <button onClick={() => navigate('/settings')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'transparent', border: `1px solid ${T.border}`,
+              color: T.muted, padding: '6px 12px', borderRadius: 7,
+              fontSize: 13, transition: 'all 150ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = accentClient; e.currentTarget.style.color = accentClient; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.muted; }}
+          >
+            <SettingsIcon /> Paramètres
+          </button>
           <button onClick={toggle}
             style={{
               background: 'transparent', border: `1px solid ${T.border}`,
@@ -213,45 +278,36 @@ export default function ClientDashboard() {
           ))}
         </div>
 
-        {/* API Key */}
-        {apiKey && (
-          <div style={{
-            background: T.surface, border: `1px solid ${T.border}`,
-            borderTop: `2px solid ${accentClient}`,
-            borderRadius: 12, padding: '14px 18px',
-            marginBottom: 20,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-              <div style={{ color: accentClient, flexShrink: 0, display: 'flex' }}><KeyIcon /></div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: accentClient, textTransform: 'uppercase', letterSpacing: 0.5, flexShrink: 0 }}>
-                Clé API
-              </span>
-              <span style={{
-                fontFamily: 'monospace', fontSize: 12, color: T.muted,
-                background: T.surface2, padding: '3px 10px', borderRadius: 6,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
-              }}>
-                {apiKey}
-              </span>
-            </div>
-            <button onClick={copyKey}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 5,
-                background: keyCopied ? T.successBg : T.accentBg,
-                border: `1px solid ${keyCopied ? T.successBorder : T.border}`,
-                color: keyCopied ? T.success : accentClient,
-                padding: '6px 14px', borderRadius: 7,
-                fontSize: 12, fontWeight: 600, flexShrink: 0,
-                transition: 'all 150ms',
-              }}
-            >
-              {keyCopied ? <><CheckIcon /> Copié</> : <><CopyIcon /> Copier</>}
-            </button>
+        {/* Date filter */}
+        <div style={{
+          background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12,
+          padding: '12px 16px', marginBottom: 14,
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 12, color: T.subtle }}>Du</label>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+              style={{ padding: '5px 8px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, color: T.text }} />
           </div>
-        )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 12, color: T.subtle }}>Au</label>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+              style={{ padding: '5px 8px', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, color: T.text }} />
+          </div>
+          {(dateFrom || dateTo) && (
+            <button onClick={() => { setDateFrom(''); setDateTo(''); }}
+              style={{ background: 'transparent', border: `1px solid ${T.border}`, color: T.muted, padding: '5px 10px', borderRadius: 6, fontSize: 12 }}
+            >
+              Réinitialiser
+            </button>
+          )}
+          {selectedTables.length > 0 && (
+            <span style={{ fontSize: 12, color: T.subtle, marginLeft: 'auto' }}>
+              {selectedTables.length} table{selectedTables.length > 1 ? 's' : ''} filtrée{selectedTables.length > 1 ? 's' : ''} (voir Paramètres)
+            </span>
+          )}
+        </div>
 
-        {/* Data table */}
         <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, overflow: 'hidden' }}>
           <div style={{
             padding: '14px 18px',
@@ -259,27 +315,92 @@ export default function ClientDashboard() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
             <span style={{ fontWeight: 600, fontSize: 14 }}>Données POS reçues</span>
-            <button onClick={() => loadData(page)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                background: 'transparent', border: `1px solid ${T.border}`,
-                color: T.muted, padding: '6px 12px', borderRadius: 7,
-                fontSize: 12, fontWeight: 500, transition: 'all 150ms',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.subtle; e.currentTarget.style.color = T.text; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.muted; }}
-            >
-              <RefreshIcon /> Actualiser
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', background: T.bg, border: `1px solid ${T.border}`, borderRadius: 7, padding: 2 }}>
+                {[{ key: 'table', label: 'Tableau' }, { key: 'chart', label: 'Graphique' }].map((m) => (
+                  <button key={m.key} onClick={() => setViewMode(m.key)}
+                    style={{
+                      padding: '5px 12px', borderRadius: 5, fontSize: 12, fontWeight: 600,
+                      border: 'none', cursor: 'pointer', transition: 'all 150ms',
+                      background: viewMode === m.key ? T.surface : 'transparent',
+                      color: viewMode === m.key ? accentClient : T.muted,
+                      boxShadow: viewMode === m.key ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => { loadData(page); loadTables(); loadTimeline(); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: 'transparent', border: `1px solid ${T.border}`,
+                  color: T.muted, padding: '6px 12px', borderRadius: 7,
+                  fontSize: 12, fontWeight: 500, transition: 'all 150ms',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = T.subtle; e.currentTarget.style.color = T.text; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = T.border; e.currentTarget.style.color = T.muted; }}
+              >
+                <RefreshIcon /> Actualiser
+              </button>
+            </div>
           </div>
 
-          {loading ? (
+          {viewMode === 'chart' ? (
+            <div style={{ padding: 18 }}>
+              <div style={{ marginBottom: 22 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>Interactions par table</div>
+                <div style={{ fontSize: 11, color: T.subtle, marginBottom: 12 }}>
+                  {selectedTables.length > 0 ? 'Tables sélectionnées' : 'Top 12 des tables les plus actives'}
+                </div>
+                {tablesLoading ? (
+                  <div style={{ padding: '40px 0', textAlign: 'center', color: T.muted, fontSize: 13 }}>Chargement...</div>
+                ) : chartTables.length === 0 ? (
+                  <div style={{ padding: '40px 0', textAlign: 'center', color: T.subtle, fontSize: 13 }}>Aucune donnée à afficher</div>
+                ) : (
+                  <div style={{ width: '100%', height: 280 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartTables} margin={{ top: 5, right: 10, left: 0, bottom: 70 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                        <XAxis dataKey="table_name" angle={-45} textAnchor="end" interval={0} height={90} tick={{ fontSize: 10, fill: T.muted }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: T.muted }} />
+                        <Tooltip contentStyle={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12 }} />
+                        <Bar dataKey="sync_count" name="Interactions" fill={accentClient} radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>Interactions par jour</div>
+                <div style={{ fontSize: 11, color: T.subtle, marginBottom: 12 }}>Nombre de synchronisations reçues par jour</div>
+                {timelineLoading ? (
+                  <div style={{ padding: '40px 0', textAlign: 'center', color: T.muted, fontSize: 13 }}>Chargement...</div>
+                ) : timeline.length === 0 ? (
+                  <div style={{ padding: '40px 0', textAlign: 'center', color: T.subtle, fontSize: 13 }}>Aucune donnée à afficher</div>
+                ) : (
+                  <div style={{ width: '100%', height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={timeline} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={T.border} />
+                        <XAxis dataKey="date" tick={{ fontSize: 11, fill: T.muted }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: T.muted }} />
+                        <Tooltip contentStyle={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 12 }} />
+                        <Line type="monotone" dataKey="interactions" name="Interactions" stroke={accentClient} strokeWidth={2} dot={{ r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : loading ? (
             <div style={{ padding: '64px 0', textAlign: 'center', color: T.muted, fontSize: 14 }}>Chargement...</div>
           ) : records.length === 0 ? (
             <div style={{ padding: '72px 0', textAlign: 'center' }}>
               <div style={{ color: T.subtle, marginBottom: 12, display: 'flex', justifyContent: 'center' }}><InboxIcon /></div>
               <div style={{ fontSize: 14, color: T.muted, marginBottom: 6 }}>Aucune donnée reçue pour le moment</div>
-              <div style={{ fontSize: 12, color: T.subtle }}>L'agent enverra les données ici via la clé API ci-dessus.</div>
+              <div style={{ fontSize: 12, color: T.subtle }}>L'agent enverra les données ici une fois configuré (voir Paramètres).</div>
             </div>
           ) : (
             <>
@@ -298,7 +419,10 @@ export default function ClientDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {records.map((r, i) => (
+                  {records.map((r, i) => {
+                    const name = tableLabel(r.data?.type);
+                    const rowCount = Array.isArray(r.data?.data) ? r.data.data.length : null;
+                    return (
                     <React.Fragment key={r.id}>
                       <tr className="trow">
                         <td style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, fontSize: 12, color: T.subtle }}>
@@ -308,12 +432,20 @@ export default function ClientDashboard() {
                           {formatDate(r.received_at)}
                         </td>
                         <td style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, maxWidth: 0, overflow: 'hidden' }}>
-                          <code style={{
-                            fontSize: 12, color: T.muted,
-                            display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {JSON.stringify(r.data).slice(0, 90)}{JSON.stringify(r.data).length > 90 ? '...' : ''}
-                          </code>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: 11, fontWeight: 600, color: accentClient,
+                              background: T.accentBg, border: `1px solid ${T.border}`,
+                              padding: '2px 8px', borderRadius: 6, whiteSpace: 'nowrap',
+                            }}>
+                              {name}
+                            </span>
+                            {rowCount !== null && (
+                              <span style={{ fontSize: 12, color: T.subtle }}>
+                                {rowCount} ligne{rowCount !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}` }}>
                           <button
@@ -333,20 +465,14 @@ export default function ClientDashboard() {
                       </tr>
                       {expanded === r.id && (
                         <tr>
-                          <td colSpan={4} style={{ padding: '0 16px 14px', background: T.bg }}>
-                            <pre style={{
-                              background: T.surface, border: `1px solid ${T.border}`,
-                              borderRadius: 8, padding: '12px 14px',
-                              fontSize: 12, color: T.muted, overflow: 'auto',
-                              lineHeight: 1.6, marginTop: 2,
-                            }}>
-                              {JSON.stringify(r.data, null, 2)}
-                            </pre>
+                          <td colSpan={4} style={{ padding: '0 16px 14px', background: T.bg, maxWidth: 0 }}>
+                            <DataRowsTable rows={r.data?.data} T={T} />
                           </td>
                         </tr>
                       )}
                     </React.Fragment>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
 

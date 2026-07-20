@@ -145,7 +145,7 @@ ADMIN_PASSWORD=votre_mot_de_passe_admin
 ```bash
 # Sur l'EC2, dans le dossier posChecker/backend
 npm install
-npm run db:init        # crée les tables
+npm run db:init        # applique les migrations SQL (backend/migrations/)
 npm run db:seed-admin  # crée le compte admin
 ```
 
@@ -230,9 +230,10 @@ posChecker/
 │   │   │   └── agent.js        # Réception données POS
 │   │   └── app.js
 │   ├── scripts/
-│   │   ├── initDb.js           # Créer les tables
+│   │   ├── migrate.js          # Applique les migrations SQL en attente
 │   │   └── seedAdmin.js        # Créer le premier admin
-│   ├── schema.sql
+│   ├── migrations/
+│   │   └── 001_init.sql        # Schéma initial (admins, clients, pos_data)
 │   ├── Dockerfile
 │   ├── .env.example
 │   └── package.json

@@ -1,0 +1,37 @@
+{
+  "name": "pos-local-agent",
+  "version": "1.0.0",
+  "description": "Agent local (service Windows) qui lit la base MySQL/MariaDB du POS et pousse les métriques vers l'API cloud - CDC-POS-DASHBOARD-2026",
+  "main": "src/index.js",
+  "bin": "src/cli.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "install-service": "node src/install-service.js",
+    "uninstall-service": "node src/uninstall-service.js",
+    "setup": "node src/setup.js",
+    "inspect-schema": "node src/inspect-schema.js",
+    "test-run": "node src/test-run.js",
+    "build": "pkg . --output pos-agent.exe"
+  },
+  "dependencies": {
+    "mysql2": "^3.11.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.5",
+    "axios": "^1.7.7",
+    "winston": "^3.14.2",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.21.0"
+  },
+  "pkg": {
+    "targets": [
+      "node22-win-x64"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

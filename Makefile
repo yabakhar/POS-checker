@@ -32,7 +32,7 @@ logs-frontend:
 
 # ── DATABASE ──────────────────────────────────────────────────
 db-init:
-	cd backend && node scripts/initDb.js
+	cd backend && node scripts/migrate.js
 
 db-seed:
 	cd backend && node scripts/seedAdmin.js

@@ -18,7 +18,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      # Postgres n'execute ces scripts que sur un volume tout neuf, et
+      # seulement une fois : ca couvre juste le bootstrap initial (001).
+      # Les migrations suivantes (002+) doivent passer par
+      # `npm run db:migrate` (backend/scripts/migrate.js), y compris ici.
+      - ./backend/migrations/001_init.sql:/docker-entrypoint-initdb.d/01-schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -34,6 +38,9 @@ services:
       - "3001:3001"
     volumes:
       - ./backend/src:/app/src     # hot reload
+      - ./agent/pos-agent.exe:/agent-dist/pos-agent.exe:ro
+      - ./agent/INSTALLER.bat:/agent-dist/INSTALLER.bat:ro
+      - ./agent/reset-agentpos-user-2025.bat:/agent-dist/reset-agentpos-user-2025.bat:ro
     env_file:
       - ./backend/.env             # load .env first
     environment:                   # these override .env if duplicated

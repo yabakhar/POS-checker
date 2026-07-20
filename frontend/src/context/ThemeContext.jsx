@@ -60,6 +60,7 @@ export function ThemeProvider({ children }) {
     document.documentElement.style.setProperty('--row-hover-bg', dark ? 'rgba(59,130,246,0.05)' : 'rgba(37,99,235,0.04)');
     document.documentElement.style.setProperty('--scrollbar-thumb', T.border);
     document.documentElement.style.setProperty('--scrollbar-thumb-hover', T.subtle);
+    document.documentElement.style.setProperty('--date-icon-filter', dark ? 'invert(1)' : 'invert(0)');
   }, [dark]);
 
   return (

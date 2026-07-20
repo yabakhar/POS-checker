@@ -4,11 +4,13 @@
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",
-    "dev": "nodemon src/app.js",
-    "db:init": "node scripts/initDb.js",
+    "dev": "nodemon -L src/app.js",
+    "db:init": "node scripts/migrate.js",
+    "db:migrate": "node scripts/migrate.js",
     "db:seed-admin": "node scripts/seedAdmin.js"
   },
   "dependencies": {
+    "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

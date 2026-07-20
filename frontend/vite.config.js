@@ -10,6 +10,12 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // required when running inside Docker
     port: 5173,
+    watch: {
+      // Docker Desktop on Windows doesn't forward native fs change events
+      // through the bind mount, so chokidar's default watcher misses edits.
+      usePolling: true,
+      interval: 300,
+    },
     proxy: {
       '/api': {
         target: apiTarget,

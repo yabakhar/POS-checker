@@ -4,6 +4,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import ClientLogin from './pages/ClientLogin';
 import ClientDashboard from './pages/ClientDashboard';
+import ClientSettings from './pages/ClientSettings';
 import ProtectedRoute from './components/ProtectedRoute';
 
 export default function App() {
@@ -26,6 +27,14 @@ export default function App() {
           element={
             <ProtectedRoute role="client">
               <ClientDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute role="client">
+              <ClientSettings />
             </ProtectedRoute>
           }
         />

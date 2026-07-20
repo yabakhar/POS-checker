@@ -23,6 +23,9 @@ input:-webkit-autofill:focus {
   caret-color: #EFF6FF;
 }
 
+/* Icône native du calendrier (input type=date) : noire par défaut, invisible sur fond sombre */
+input[type="date"]::-webkit-calendar-picker-indicator { filter: var(--date-icon-filter, invert(1)); cursor: pointer; }
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb, #1A2E44); border-radius: 10px; }
