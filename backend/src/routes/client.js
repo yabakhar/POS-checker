@@ -5,6 +5,7 @@ const path = require('path');
 const archiver = require('archiver');
 const pool = require('../config/db');
 const { verifyToken } = require('../middleware/authMiddleware');
+const salesQueries = require('../services/salesQueries');
 
 // Tables excluded everywhere in the client portal (too large / not relevant
 // to display), even if older synced rows for them still exist in pos_data.
@@ -233,6 +234,74 @@ router.get('/stats', verifyToken('client'), async (req, res) => {
       today_records: parseInt(today.rows[0].count),
       last_sync: last.rows[0]?.received_at || null,
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// Sales reports (Tableau de bord + Rapports et analyses), computed on the fly from the raw
+// synced tables in pos_data — see backend/src/services/salesQueries.js for the query layer.
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function parseDateRange(req, res) {
+  const { from, to } = req.query;
+  if ((from && !DATE_RE.test(from)) || (to && !DATE_RE.test(to))) {
+    res.status(400).json({ error: 'Paramètres from/to invalides (format attendu: YYYY-MM-DD).' });
+    return null;
+  }
+  return { from, to };
+}
+
+router.get('/reports/summary', verifyToken('client'), async (req, res) => {
+  const range = parseDateRange(req, res);
+  if (!range) return;
+  try {
+    res.json(await salesQueries.getDashboardSummary(req.user.id, range.from, range.to));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/reports/sales-recap', verifyToken('client'), async (req, res) => {
+  const range = parseDateRange(req, res);
+  if (!range) return;
+  try {
+    res.json(await salesQueries.getSalesRecap(req.user.id, range.from, range.to));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/reports/sales-by-article', verifyToken('client'), async (req, res) => {
+  const range = parseDateRange(req, res);
+  if (!range) return;
+  try {
+    res.json(await salesQueries.getSalesByArticle(req.user.id, range.from, range.to));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/reports/sales-by-category', verifyToken('client'), async (req, res) => {
+  const range = parseDateRange(req, res);
+  if (!range) return;
+  try {
+    res.json(await salesQueries.getSalesByCategory(req.user.id, range.from, range.to));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+router.get('/reports/sales-by-employee', verifyToken('client'), async (req, res) => {
+  const range = parseDateRange(req, res);
+  if (!range) return;
+  try {
+    res.json(await salesQueries.getSalesByEmployee(req.user.id, range.from, range.to));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Internal server error.' });

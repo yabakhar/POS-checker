@@ -55,6 +55,7 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     const T = dark ? DARK : LIGHT;
     localStorage.setItem('theme', dark ? 'dark' : 'light');
+    document.documentElement.classList.toggle('dark', dark);
     document.body.style.background = T.bg;
     document.body.style.color = T.text;
     document.documentElement.style.setProperty('--row-hover-bg', dark ? 'rgba(59,130,246,0.05)' : 'rgba(37,99,235,0.04)');
