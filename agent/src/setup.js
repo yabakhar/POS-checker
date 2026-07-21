@@ -97,36 +97,53 @@ async function main() {
     : 'Nom de la base de données POS : ';
   const dbName = await ask(dbNamePrompt) || defaultDbName;
 
+  // Idem : hôte/port MySQL modifiés à la main dans .env (rare, mais ça arrive
+  // si l'agent tourne contre une instance distante) — ne pas les écraser.
+  const dbHost = existing.DB_HOST || '127.0.0.1';
+  const dbPort = existing.DB_PORT || '3306';
+
   const watchedTables = await chooseWatchedTables({
-    host: '127.0.0.1',
-    port: 3306,
+    host: dbHost,
+    port: Number(dbPort),
     user: dbUser,
     password: dbPassword,
     database: dbName,
     existingTables: existing.WATCHED_TABLES || '',
   });
 
+  // Comme SHOP_TOKEN/DB_*/WATCHED_TABLES ci-dessus : si le développeur a déjà
+  // confirmé que tout est prêt (DRY_RUN=false) et ajusté la cadence de sync,
+  // relancer setup() (fichier .env manquant, ou "Reconfigurer" dans le menu)
+  // ne doit pas repasser en mode test ni écraser cette cadence. Seul un tout
+  // premier .env (aucun DRY_RUN existant) reçoit le défaut sûr DRY_RUN=true.
+  const dryRun = existing.DRY_RUN !== undefined ? existing.DRY_RUN : 'true';
+  const dryRunFile = existing.DRY_RUN_FILE || './data/test-output.json';
+  const syncTablesSeconds = existing.SYNC_TABLES_SECONDS || '3600';
+  const retryIntervalSeconds = existing.RETRY_INTERVAL_SECONDS || '60';
+  const logLevel = existing.LOG_LEVEL || 'info';
+  const logDir = existing.LOG_DIR || './logs';
+
   const envContent = `SHOP_TOKEN=${shopToken}
 
-DB_HOST=127.0.0.1
-DB_PORT=3306
+DB_HOST=${dbHost}
+DB_PORT=${dbPort}
 DB_USER=${dbUser}
 DB_PASSWORD=${dbPassword}
 DB_NAME=${dbName}
 
 CLOUD_API_URL=${cloudApiUrl}
 
-DRY_RUN=true
-DRY_RUN_FILE=./data/test-output.json
+DRY_RUN=${dryRun}
+DRY_RUN_FILE=${dryRunFile}
 
 WATCHED_TABLES=${watchedTables}
 
-SYNC_TABLES_SECONDS=3600
+SYNC_TABLES_SECONDS=${syncTablesSeconds}
 
-RETRY_INTERVAL_SECONDS=60
+RETRY_INTERVAL_SECONDS=${retryIntervalSeconds}
 
-LOG_LEVEL=info
-LOG_DIR=./logs
+LOG_LEVEL=${logLevel}
+LOG_DIR=${logDir}
 `;
 
   fs.writeFileSync(envPath, envContent, 'utf8');
