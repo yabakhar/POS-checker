@@ -38,6 +38,8 @@ services:
       - "3001:3001"
     volumes:
       - ./backend/src:/app/src     # hot reload
+      - ./backend/prisma:/app/prisma
+      - ./backend/scripts:/app/scripts
       - ./agent/pos-agent.exe:/agent-dist/pos-agent.exe:ro
       - ./agent/INSTALLER.bat:/agent-dist/INSTALLER.bat:ro
       - ./agent/reset-agentpos-user-2025.bat:/agent-dist/reset-agentpos-user-2025.bat:ro
@@ -46,11 +48,7 @@ services:
     environment:                   # these override .env if duplicated
       NODE_ENV: development
       PORT: 3001
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: pos_checker
-      DB_USER: postgres
-      DB_PASSWORD: localpassword
+      DATABASE_URL: postgresql://postgres:localpassword@db:5432/pos_checker
       JWT_SECRET: dev_secret_not_for_prod
       FRONTEND_URL: http://localhost:5173
     depends_on:

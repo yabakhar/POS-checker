@@ -16,6 +16,14 @@ function getPool() {
       connectionLimit: 5,
       queueLimit: 0,
       connectTimeout: 10000,
+      // Without this, mysql2 parses DATE/DATETIME columns into JS Date objects at local
+      // midnight/local time, and JSON.stringify (in httpClient.js) then serializes those
+      // through toISOString(), converting to UTC — on this machine's UTC+1 (Casablanca)
+      // offset, that pushes every date back by an hour, corrupting DATE columns like
+      // chp_date/journee_cloture (e.g. 2026-07-22 becomes "2026-07-21T23:00:00.000Z", which
+      // the backend then reads back as 2026-07-21). MySQL DATE/DATETIME have no timezone of
+      // their own; keeping them as the literal strings MySQL returns avoids any conversion.
+      dateStrings: true,
     });
   }
   return pool;

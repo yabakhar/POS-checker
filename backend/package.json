@@ -1,26 +1,38 @@
 {
   "name": "pos-checker-backend",
   "version": "1.0.0",
-  "main": "src/app.js",
+  "main": "dist/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "nodemon -L src/app.js",
-    "db:init": "node scripts/migrate.js",
-    "db:migrate": "node scripts/migrate.js",
-    "db:seed-admin": "node scripts/seedAdmin.js",
-    "db:reset": "node scripts/resetDb.js"
+    "start": "node dist/app.js",
+    "dev": "tsx watch src/app.ts",
+    "build": "tsc",
+    "postinstall": "prisma generate",
+    "db:init": "tsx scripts/migrate.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed-admin": "tsx scripts/seedAdmin.ts",
+    "db:reset": "tsx scripts/resetDb.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.11.3",
-    "uuid": "^9.0.0"
+    "prisma": "^6.19.3",
+    "uuid": "^9.0.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@types/archiver": "^8.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.1.1",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
   }
 }

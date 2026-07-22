@@ -13,6 +13,9 @@ dist/
 build/
 **/dist/
 
+# Generated Prisma Client (regenerated via `prisma generate` / npm postinstall)
+backend/generated/
+
 # Logs
 *.log
 npm-debug.log*
