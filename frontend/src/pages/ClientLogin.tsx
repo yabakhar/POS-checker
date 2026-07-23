@@ -115,9 +115,7 @@ export default function ClientLogin() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
           <div style={{
             width: 40, height: 40,
-            background: dark
-              ? 'linear-gradient(135deg, #0EA5E9 0%, #0369A1 100%)'
-              : 'linear-gradient(135deg, #0284C7 0%, #075985 100%)',
+            background: T.accentClient,
             borderRadius: 10, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
           }}>
@@ -185,7 +183,7 @@ export default function ClientLogin() {
               opacity: loading ? 0.7 : 1,
               transition: 'background 150ms, box-shadow 150ms',
             }}
-            onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = '#0369A1'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(3,105,161,0.35)'; } }}
+            onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = '#0F6B5C'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(15,107,92,0.35)'; } }}
             onMouseLeave={(e) => { e.currentTarget.style.background = T.accentClient; e.currentTarget.style.boxShadow = 'none'; }}
           >
             {loading ? 'Connexion...' : 'Se connecter'}

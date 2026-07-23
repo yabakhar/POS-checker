@@ -27,6 +27,7 @@ const REPORT_ITEMS = [
   // { label: 'Réductions', path: '/dashboard/reports/discounts' },
   // { label: 'Taxes', path: '/dashboard/reports/taxes' },
   { label: 'Périodes de travail', path: '/dashboard/reports/work-periods' },
+  { label: 'Mouvements de caisse', path: '/dashboard/reports/cash-movements' },
 ];
 
 function AppSidebar() {

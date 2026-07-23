@@ -355,4 +355,13 @@ router.get('/reports/timeclock', verifyToken('client'), validateQuery(dateRangeQ
   }
 });
 
+router.get('/reports/cash-movements', verifyToken('client'), validateQuery(dateRangeQuerySchema), async (req: ReportRequest, res: Response) => {
+  try {
+    res.json(await salesQueries.getCashMovementsReport(req.user!.id, req.query.from, req.query.to));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
 export default router;

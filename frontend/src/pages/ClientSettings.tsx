@@ -104,7 +104,7 @@ export default function ClientSettings() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{
             width: 32, height: 32,
-            background: 'linear-gradient(135deg, #0EA5E9, #0369A1)',
+            background: T.accentClient,
             borderRadius: 8, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
           }}>

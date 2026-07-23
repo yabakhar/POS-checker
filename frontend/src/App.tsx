@@ -12,6 +12,7 @@ import SalesByEmployeePage from './pages/dashboard/SalesByEmployeePage';
 import PaymentMethodsPage from './pages/dashboard/PaymentMethodsPage';
 import TaxesPage from './pages/dashboard/TaxesPage';
 import WorkPeriodsPage from './pages/dashboard/WorkPeriodsPage';
+import CashMovementsPage from './pages/dashboard/CashMovementsPage';
 import ReportPlaceholder from './pages/dashboard/ReportPlaceholder';
 import RawDataBrowser from './pages/dashboard/RawDataBrowser';
 import ClientSettings from './pages/ClientSettings';
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="reports/discounts" element={<ReportPlaceholder title="Réductions" />} />
           <Route path="reports/taxes" element={<TaxesPage />} />
           <Route path="reports/work-periods" element={<WorkPeriodsPage />} />
+          <Route path="reports/cash-movements" element={<CashMovementsPage />} />
           <Route path="raw" element={<RawDataBrowser />} />
         </Route>
         <Route

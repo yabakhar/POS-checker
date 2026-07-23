@@ -145,6 +145,21 @@ const CTE_REGLEMENT = latestRowsCTE('latest_reglement', 'tbl_les_reglement', 'nu
   `row->>'chp_intitule' AS chp_intitule`,
 ]);
 
+// Till float movements (opening float, cash in/out, fees, ...) — num_serveur is the same
+// log_user server number as chp_serv/id_serveur elsewhere, not tbl_users_fixe.num_user.
+const CTE_FOND_DE_CAISSE = latestRowsCTE('latest_fond_de_caisse', 'tbl_fond_de_caisse', 'num_auto', [
+  `(row->>'num_auto')::int AS num_auto`,
+  `(row->>'chp_date')::date AS chp_date`,
+  `row->>'num_serveur' AS num_serveur`,
+  `(row->>'montant')::numeric AS montant`,
+  `(row->>'id_raison_fond_de_caisse')::int AS id_raison_fond_de_caisse`,
+]);
+
+const CTE_FOND_DE_CAISSE_RAISON = latestRowsCTE('latest_fond_de_caisse_raison', 'tbl_fond_de_caisse_raison', 'id_raison_fond_de_caisse', [
+  `(row->>'id_raison_fond_de_caisse')::int AS id_raison_fond_de_caisse`,
+  `row->>'raison_fond_de_caisse' AS raison_fond_de_caisse`,
+]);
+
 // Revenue = chp_qt * chp_pv. chp_pv is the unit price actually charged (already reflects any
 // per-line discount) — tx_remise is not additionally applied on top, that would double-discount.
 // Sample data has no non-zero-discount rows to verify this against; spot-check against a real
@@ -467,4 +482,55 @@ export async function getTimeclockReport(clientId: string, from?: string, to?: s
       etat: end ? 'Terminé' : 'En cours',
     };
   });
+}
+
+// Till float movements (opening float, cash in/out, fees...) with a running balance.
+// The balance is computed over ALL history up to `to` (not just the selected range) so it
+// reflects the actual theoretical till level, not a reset-to-zero within the date filter —
+// there's no independent "physically counted cash" figure anywhere in the synced data, so
+// this is a movements ledger, not a declared-vs-counted discrepancy detector.
+export async function getCashMovementsReport(clientId: string, from?: string, to?: string) {
+  const range = defaultRange(from, to);
+  const sql = `
+    WITH ${CTE_FOND_DE_CAISSE}, ${CTE_FOND_DE_CAISSE_RAISON}, ${CTE_USERS_FIXE}
+    SELECT
+      f.num_auto,
+      f.chp_date,
+      f.montant,
+      COALESCE(r.raison_fond_de_caisse, 'Raison ' || f.id_raison_fond_de_caisse) AS reason,
+      COALESCE(uf.nom_user, 'Employé ' || f.num_serveur) AS employee_name
+    FROM latest_fond_de_caisse f
+    LEFT JOIN latest_fond_de_caisse_raison r ON r.id_raison_fond_de_caisse = f.id_raison_fond_de_caisse
+    LEFT JOIN latest_users_fixe uf ON uf.log_user = f.num_serveur
+    WHERE f.chp_date <= $2::date
+    ORDER BY f.chp_date ASC, f.num_auto ASC
+  `;
+  const rows = await prisma.$queryRawUnsafe<any[]>(sql, clientId, range.to);
+
+  let balance = 0;
+  const withBalance = rows.map((r) => {
+    balance += Number(r.montant);
+    return {
+      num_auto: r.num_auto,
+      chp_date: r.chp_date.toISOString().slice(0, 10),
+      employee_name: r.employee_name,
+      reason: r.reason,
+      amount: Number(r.montant),
+      balance,
+    };
+  });
+
+  const inRange = withBalance.filter((r) => r.chp_date >= range.from);
+
+  const totalsByReason = new Map<string, number>();
+  for (const r of inRange) {
+    totalsByReason.set(r.reason, (totalsByReason.get(r.reason) || 0) + r.amount);
+  }
+
+  return {
+    movements: [...inRange].reverse(),
+    totals_by_reason: Array.from(totalsByReason, ([reason, amount]) => ({ reason, amount })),
+    net_movement: inRange.reduce((sum, r) => sum + r.amount, 0),
+    ending_balance: withBalance.length > 0 ? withBalance[withBalance.length - 1].balance : 0,
+  };
 }

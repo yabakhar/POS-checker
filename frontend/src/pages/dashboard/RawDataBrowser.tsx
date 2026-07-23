@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import KpiCard from '../../components/reports/KpiCard';
+import { toLocalISODate as toISO } from '@/lib/utils';
 
 interface PosDataRecord {
   id: string;
@@ -187,11 +188,11 @@ export default function RawDataBrowser() {
       <Card className="mb-3.5 flex flex-row flex-wrap items-center gap-3 px-4 py-3">
         <div className="flex items-center gap-1.5">
           <label className="text-xs text-muted-foreground">Du</label>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-auto" />
+          <Input type="date" value={dateFrom} max={toISO(new Date())} onChange={(e) => setDateFrom(e.target.value)} className="w-auto" />
         </div>
         <div className="flex items-center gap-1.5">
           <label className="text-xs text-muted-foreground">Au</label>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-auto" />
+          <Input type="date" value={dateTo} max={toISO(new Date())} onChange={(e) => setDateTo(e.target.value)} className="w-auto" />
         </div>
         {(dateFrom || dateTo) && (
           <Button variant="outline" size="sm" onClick={() => { setDateFrom(''); setDateTo(''); }}>Réinitialiser</Button>

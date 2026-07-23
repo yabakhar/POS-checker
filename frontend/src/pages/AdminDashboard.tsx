@@ -265,7 +265,7 @@ export default function AdminDashboard() {
     width: '100%', padding: '10px 14px',
     background: T.inputBg,
     border: `1px solid ${focused === name ? T.accent : T.border}`,
-    boxShadow: focused === name ? '0 0 0 3px rgba(59,130,246,0.12)' : 'none',
+    boxShadow: focused === name ? '0 0 0 3px rgba(23,169,141,0.12)' : 'none',
     borderRadius: 8, color: T.text, fontSize: 14, outline: 'none',
     marginBottom: 16, transition: 'border-color 150ms, box-shadow 150ms',
   });
@@ -287,7 +287,7 @@ export default function AdminDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <div style={{
               width: 34, height: 34,
-              background: 'linear-gradient(135deg, #3B82F6, #1E40AF)',
+              background: T.accent,
               borderRadius: 9, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
             }}>
@@ -332,7 +332,7 @@ export default function AdminDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px' }}>
             <div style={{
               width: 30, height: 30, borderRadius: '50%',
-              background: T.accentBg, border: `1px solid rgba(59,130,246,0.25)`,
+              background: T.accentBg, border: `1px solid rgba(23,169,141,0.25)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 12, fontWeight: 700, color: T.accent, flexShrink: 0,
             }}>
@@ -377,7 +377,7 @@ export default function AdminDashboard() {
               border: 'none', padding: '9px 18px', borderRadius: 8,
               fontSize: 13, fontWeight: 600, transition: 'background 150ms, box-shadow 150ms',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#2563EB'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(59,130,246,0.35)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#0F6B5C'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(15,107,92,0.35)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = T.accent; e.currentTarget.style.boxShadow = 'none'; }}
           >
             <PlusIcon /> Créer un client
@@ -505,7 +505,7 @@ export default function AdminDashboard() {
                       border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600,
                       opacity: submitting || !isPasswordValid(form.password) ? 0.5 : 1, transition: 'background 150ms, opacity 150ms',
                     }}
-                      onMouseEnter={(e) => !submitting && (e.currentTarget.style.background = '#2563EB')}
+                      onMouseEnter={(e) => !submitting && (e.currentTarget.style.background = '#0F6B5C')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = T.accent)}
                     >{submitting ? 'Création...' : 'Créer'}</button>
                   </div>

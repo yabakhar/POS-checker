@@ -20,15 +20,16 @@ interface DateRangePickerProps {
 }
 
 export default function DateRangePicker({ dateFrom, dateTo, onChange }: DateRangePickerProps) {
+  const todayISO = toISO(new Date());
   return (
     <Card className="mb-3.5 flex flex-row flex-wrap items-center gap-3 px-4 py-3">
       <div className="flex items-center gap-1.5">
         <label className="text-xs text-muted-foreground">Du</label>
-        <Input type="date" value={dateFrom} onChange={(e) => onChange(e.target.value, dateTo)} className="w-auto" />
+        <Input type="date" value={dateFrom} max={todayISO} onChange={(e) => onChange(e.target.value, dateTo)} className="w-auto" />
       </div>
       <div className="flex items-center gap-1.5">
         <label className="text-xs text-muted-foreground">Au</label>
-        <Input type="date" value={dateTo} onChange={(e) => onChange(dateFrom, e.target.value)} className="w-auto" />
+        <Input type="date" value={dateTo} max={todayISO} onChange={(e) => onChange(dateFrom, e.target.value)} className="w-auto" />
       </div>
       <div className="flex flex-wrap gap-1.5 sm:ml-auto">
         {PRESETS.map((p) => (

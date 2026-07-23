@@ -114,7 +114,7 @@ export default function AdminLogin() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
           <div style={{
             width: 40, height: 40,
-            background: 'linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%)',
+            background: T.accent,
             borderRadius: 10, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
           }}>
@@ -182,7 +182,7 @@ export default function AdminLogin() {
               opacity: loading ? 0.7 : 1,
               transition: 'background 150ms, box-shadow 150ms',
             }}
-            onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = '#1D4ED8'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(37,99,235,0.35)'; } }}
+            onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = '#0F6B5C'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(15,107,92,0.35)'; } }}
             onMouseLeave={(e) => { e.currentTarget.style.background = T.accent; e.currentTarget.style.boxShadow = 'none'; }}
           >
             {loading ? 'Connexion...' : 'Se connecter'}
