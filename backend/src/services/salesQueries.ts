@@ -54,9 +54,30 @@ const CTE_FAMILLE = latestRowsCTE('latest_famille', 'tbl_famille', 'num_fam', [
   `row->>'des' AS des`,
 ]);
 
-const CTE_USERS = latestRowsCTE('latest_users', 'tbl_users', 'num_user', [
-  `row->>'num_user' AS num_user`,
-  `row->>'nom_user' AS nom_user`,
+// tbl_users_fixe is the real staff directory ("1-SAID", "2-BRAHIM", ...). It has two different
+// id columns: num_user (its own internal primary key) and log_user (the short POS terminal
+// login/server number). ne_fichier.chp_serv and tbl_pointeuse.id_serveur are both that same
+// login/server number — NOT num_user — confirmed by cross-checking the actual chp_serv/
+// id_serveur values in synced data against each column's range (they land squarely in
+// log_user's 0-36 range, not num_user's set of internal ids). Joining on num_user instead
+// (an earlier version of this file did) silently attributes sales/punches to the wrong
+// employee rather than falling back to "unknown" — worse than no name at all, so there's no
+// tbl_users fallback here either: that table only has num_user, no log_user, so it can't be
+// joined against chp_serv/id_serveur any more reliably than tbl_users_fixe.num_user could.
+const CTE_USERS_FIXE = latestRowsCTE('latest_users_fixe', 'tbl_users_fixe', 'num_user', [
+  `row->>'log_user' AS log_user`,
+  // Source names occasionally contain a stray C1 control character (0x96, a mis-decoded
+  // Windows-1252 dash) in place of a hyphen, e.g. "7\x96MARIA" instead of "7-MARIA".
+  `regexp_replace(row->>'nom_user', chr(150), '-', 'g') AS nom_user`,
+]);
+
+const CTE_POINTEUSE = latestRowsCTE('latest_pointeuse', 'tbl_pointeuse', 'id_pointage', [
+  `row->>'id_pointage' AS id_pointage`,
+  `row->>'id_serveur' AS id_serveur`,
+  `(row->>'chp_date')::date AS chp_date`,
+  `(row->>'date_heure_demarre')::timestamp AS date_heure_demarre`,
+  `NULLIF(row->>'date_heure_arret', '')::timestamp AS date_heure_arret`,
+  `(row->>'etat_pointage')::int AS etat_pointage`,
 ]);
 
 const CTE_TVA_TICKET = latestRowsCTE('latest_tva_ticket', 'tva_par_ticket', 'id_ticket', [
@@ -75,36 +96,54 @@ const CTE_CLOTURE = latestRowsCTE('latest_cloture', 'tbl_cloture', 'num_cloture'
   `(row->>'export_compta')::int AS export_compta`,
 ]);
 
-// caisse_fichier is a daily till-summary row (one per chp_date, this shop only ever has
-// num_magasin/chp_num = 1 so we key latest-row-per-day on chp_date alone).
-const CTE_CAISSE = `latest_caisse AS (
-  SELECT DISTINCT ON (row->>'chp_date')
-    (row->>'chp_date')::date AS chp_date,
-    (row->>'chp_esp')::numeric AS esp,
-    (row->>'chp_chq')::numeric AS chq,
-    (row->>'chp_cdj')::numeric AS cdj,
-    (row->>'chp_cb')::numeric AS cb,
-    (row->>'chp_amex')::numeric AS amex,
-    (row->>'chp_din')::numeric AS din,
-    (row->>'chp_jcb')::numeric AS jcb,
-    (row->>'chp_inv')::numeric AS inv,
-    (row->>'chp_remi')::numeric AS remi,
-    (row->>'chp_mais')::numeric AS mais,
-    (row->>'chp_cpt')::numeric AS cpt,
-    (row->>'chp_reg16')::numeric AS reg16,
-    (row->>'chp_reg17')::numeric AS reg17,
-    (row->>'chp_reg18')::numeric AS reg18,
-    (row->>'chp_reg19')::numeric AS reg19,
-    (row->>'chp_reg20')::numeric AS reg20,
-    (row->>'chp_reg21')::numeric AS reg21,
-    (row->>'chp_reg22')::numeric AS reg22,
-    (COALESCE((row->>'chp_LIT')::numeric, 0) + COALESCE((row->>'chp_cpt_deb')::numeric, 0)
-      + COALESCE((row->>'chp_lib1')::numeric, 0) + COALESCE((row->>'chp_lib2')::numeric, 0)
-      + COALESCE((row->>'chp_lib3')::numeric, 0)) AS autres
-  FROM pos_data pd, jsonb_array_elements(pd.data->'data') AS row
-  WHERE pd.client_id = $1::uuid AND pd.data->>'type' = 'table_sync:caisse_fichier'
-  ORDER BY row->>'chp_date', pd.received_at DESC
+// ne_fichier / ne_fichier_day are the POS's finalized per-ticket sales log — as opposed to the
+// draft note_entete/note_detail pair used elsewhere in this file, these carry the actual
+// payment-method breakdown (chp_reg1..chp_reg22, one column per row in tbl_les_reglement) and
+// the serving employee (chp_serv), and update the moment a ticket is settled rather than only
+// at end-of-day closure (unlike caisse_fichier, which used to back the payment-methods report
+// and only ever has a row for days that have already been clôturées).
+// ne_fichier_day holds a live rolling window of recent tickets that mirrors into ne_fichier once
+// the day closes, so the two overlap on ticket ids still in that window — UNION the two and take
+// one row per chp_primary (latest received_at wins) to get a clean per-ticket set.
+// chp_etat: 'S' (Soldé) is a real settled sale; 'N' rows carry a negative chp_mont and are
+// cancellations/voids, excluded everywhere below.
+const CTE_NE_FICHIER = `latest_ne_fichier AS (
+  SELECT DISTINCT ON (chp_primary)
+    chp_primary, chp_date, chp_serv, chp_etat, chp_mont,
+    reg1, reg2, reg3, reg4, reg5, reg6, reg7, reg8, reg9, reg10,
+    reg11, reg12, reg13, reg14, reg15, reg16, reg17, reg18, reg19, reg20, reg21, reg22
+  FROM (
+    SELECT
+      pd.received_at,
+      row->>'chp_primary' AS chp_primary,
+      (row->>'chp_date')::date AS chp_date,
+      row->>'chp_serv' AS chp_serv,
+      row->>'chp_etat' AS chp_etat,
+      (row->>'chp_mont')::numeric AS chp_mont,
+      (row->>'chp_reg1')::numeric AS reg1, (row->>'chp_reg2')::numeric AS reg2,
+      (row->>'chp_reg3')::numeric AS reg3, (row->>'chp_reg4')::numeric AS reg4,
+      (row->>'chp_reg5')::numeric AS reg5, (row->>'chp_reg6')::numeric AS reg6,
+      (row->>'chp_reg7')::numeric AS reg7, (row->>'chp_reg8')::numeric AS reg8,
+      (row->>'chp_reg9')::numeric AS reg9, (row->>'chp_reg10')::numeric AS reg10,
+      (row->>'chp_reg11')::numeric AS reg11, (row->>'chp_reg12')::numeric AS reg12,
+      (row->>'chp_reg13')::numeric AS reg13, (row->>'chp_reg14')::numeric AS reg14,
+      (row->>'chp_reg15')::numeric AS reg15, (row->>'chp_reg16')::numeric AS reg16,
+      (row->>'chp_reg17')::numeric AS reg17, (row->>'chp_reg18')::numeric AS reg18,
+      (row->>'chp_reg19')::numeric AS reg19, (row->>'chp_reg20')::numeric AS reg20,
+      (row->>'chp_reg21')::numeric AS reg21, (row->>'chp_reg22')::numeric AS reg22
+    FROM pos_data pd, jsonb_array_elements(pd.data->'data') AS row
+    WHERE pd.client_id = $1::uuid AND pd.data->>'type' IN ('table_sync:ne_fichier', 'table_sync:ne_fichier_day')
+  ) t
+  ORDER BY chp_primary, received_at DESC
 )`;
+
+// tbl_les_reglement is the payment-type lookup (num_regl 1..22 -> label) that chp_reg1..22
+// above are positionally keyed to — this is the source of truth for those labels, not the
+// hardcoded names caisse_fichier happened to use for its own (differently-ordered) columns.
+const CTE_REGLEMENT = latestRowsCTE('latest_reglement', 'tbl_les_reglement', 'num_regl', [
+  `(row->>'num_regl')::int AS num_regl`,
+  `row->>'chp_intitule' AS chp_intitule`,
+]);
 
 // Revenue = chp_qt * chp_pv. chp_pv is the unit price actually charged (already reflects any
 // per-line discount) — tx_remise is not additionally applied on top, that would double-discount.
@@ -281,16 +320,18 @@ export async function getSalesByCategory(clientId: string, from?: string, to?: s
 
 export async function getSalesByEmployee(clientId: string, from?: string, to?: string) {
   const range = defaultRange(from, to);
+  // Built on ne_fichier/ne_fichier_day (see CTE_NE_FICHIER) rather than note_entete/note_detail:
+  // each row there is already one settled ticket, so no line-item join or discount math is
+  // needed — ticket_count is just a row count and revenue is chp_mont summed directly.
   const sql = `
-    WITH ${CTE_ENTETE}, ${CTE_DETAIL}, ${CTE_USERS}
+    WITH ${CTE_NE_FICHIER}, ${CTE_USERS_FIXE}
     SELECT
-      COALESCE(u.nom_user, 'Employé ' || e.numeroserveur) AS employee_name,
-      COUNT(DISTINCT d.id_note) AS ticket_count,
-      COALESCE(SUM(d.chp_qt * d.chp_pv), 0) AS revenue
-    FROM latest_detail d
-    JOIN latest_entete e ON e.id_note = d.id_note
-    LEFT JOIN latest_users u ON u.num_user = e.numeroserveur
-    WHERE d.chp_etatl = 'N' AND d.chp_date BETWEEN $2::date AND $3::date
+      COALESCE(uf.nom_user, 'Employé ' || f.chp_serv) AS employee_name,
+      COUNT(*) AS ticket_count,
+      COALESCE(SUM(f.chp_mont), 0) AS revenue
+    FROM latest_ne_fichier f
+    LEFT JOIN latest_users_fixe uf ON uf.log_user = f.chp_serv
+    WHERE f.chp_etat = 'S' AND f.chp_date BETWEEN $2::date AND $3::date
     GROUP BY employee_name
     ORDER BY revenue DESC
   `;
@@ -341,53 +382,28 @@ export async function getTaxesReport(clientId: string, from?: string, to?: strin
   };
 }
 
-// Column -> label mapping below is inferred from column-name semantics (chp_esp = Espèces,
-// chp_cdj = Chèque Déjeuner = Ticket Restaurant, etc.), cross-checked against the current
-// tbl_les_reglement rows where possible (num_regl 16-22 line up exactly, in order, with
-// Deliveroo/Uber Eats/CB Borne/CB EatSelf/Avoir/Fidélité/Bon Cadeau). A few columns
-// (chp_din, chp_inv) don't have a fully confirmed current-day match — corresp_paym (last
-// touched 2010) says chp_din = Diners, but the live tbl_les_reglement now has num_regl 6
-// relabeled "Virement" (inactive/etat=0 though, so unlikely to carry real amounts). Columns
-// with no confident mapping at all (chp_LIT, chp_cpt_deb, chp_lib1-3) are bucketed into
-// "Autres". Worth spot-checking against a real till closing before fully trusting the labels.
-const PAYMENT_METHOD_LABELS: [string, string][] = [
-  ['esp', 'Espèces'],
-  ['chq', 'Chèques'],
-  ['cdj', 'Ticket Restaurant'],
-  ['cb', 'Carte Bleue'],
-  ['amex', 'Amex'],
-  ['din', 'Diners'],
-  ['jcb', 'JCB'],
-  ['inv', 'Invitation'],
-  ['remi', 'Remises'],
-  ['mais', 'Maison'],
-  ['cpt', 'Compte client'],
-  ['reg16', 'Deliveroo'],
-  ['reg17', 'Uber Eats'],
-  ['reg18', 'CB Borne'],
-  ['reg19', 'CB EatSelf'],
-  ['reg20', 'Avoir'],
-  ['reg21', 'Fidélité'],
-  ['reg22', 'Bon Cadeau'],
-  ['autres', 'Autres'],
-];
+const NE_FICHIER_REG_COLUMNS = Array.from({ length: 22 }, (_, i) => `f.reg${i + 1}`).join(',');
 
 export async function getPaymentMethodsReport(clientId: string, from?: string, to?: string) {
   const range = defaultRange(from, to);
+  // Unpivots the 22 fixed reg1..reg22 columns into (amount, num_regl) pairs via
+  // unnest(...) WITH ORDINALITY, then labels each by joining num_regl against the real
+  // tbl_les_reglement lookup — see CTE_NE_FICHIER / CTE_REGLEMENT for why this replaced the
+  // old caisse_fichier-based version (which had no row at all for a not-yet-closed day, and
+  // whose hand-picked column names didn't actually line up with tbl_les_reglement).
   const sql = `
-    WITH ${CTE_CAISSE}
-    SELECT
-      ${PAYMENT_METHOD_LABELS.map(([key]) => `COALESCE(SUM(${key}), 0) AS ${key}`).join(',\n      ')}
-    FROM latest_caisse
-    WHERE chp_date BETWEEN $2::date AND $3::date
+    WITH ${CTE_NE_FICHIER}, ${CTE_REGLEMENT}
+    SELECT r.chp_intitule AS method, COALESCE(SUM(u.amount), 0) AS amount
+    FROM latest_ne_fichier f
+    CROSS JOIN LATERAL unnest(ARRAY[${NE_FICHIER_REG_COLUMNS}]) WITH ORDINALITY AS u(amount, num_regl)
+    JOIN latest_reglement r ON r.num_regl = u.num_regl
+    WHERE f.chp_etat = 'S' AND f.chp_date BETWEEN $2::date AND $3::date
+    GROUP BY r.chp_intitule
+    HAVING COALESCE(SUM(u.amount), 0) != 0
+    ORDER BY amount DESC
   `;
   const rawRows = await prisma.$queryRawUnsafe<any[]>(sql, clientId, range.from, range.to);
-  const totals = rawRows[0];
-
-  const rows = PAYMENT_METHOD_LABELS
-    .map(([key, label]) => ({ method: label, amount: Number(totals[key]) }))
-    .filter((r) => r.amount !== 0)
-    .sort((a, b) => b.amount - a.amount);
+  const rows = rawRows.map((r) => ({ method: r.method, amount: Number(r.amount) }));
 
   const total = rows.reduce((sum, r) => sum + r.amount, 0);
   return rows.map((r) => ({ ...r, pct_of_total: total > 0 ? (r.amount / total) * 100 : 0 }));
@@ -414,4 +430,41 @@ export async function getWorkPeriodsReport(clientId: string, from?: string, to?:
     etat: CLOTURE_ETAT_LABELS[r.etat_cloture] || `État ${r.etat_cloture}`,
     export_compta: r.export_compta === 1,
   }));
+}
+
+// Employee time-clock punches (tbl_pointeuse) — separate from tbl_cloture above (that's the
+// POS's own end-of-day accounting closure, this is per-employee clock-in/out). Only
+// etat_pointage 2 ("Terminé") has been observed in synced data so far; a still-open punch
+// (no date_heure_arret yet) is reported as "En cours" regardless of its etat_pointage value.
+export async function getTimeclockReport(clientId: string, from?: string, to?: string) {
+  const range = defaultRange(from, to);
+  const sql = `
+    WITH ${CTE_POINTEUSE}, ${CTE_USERS_FIXE}
+    SELECT
+      p.id_pointage,
+      COALESCE(uf.nom_user, 'Employé ' || p.id_serveur) AS employee_name,
+      p.chp_date,
+      p.date_heure_demarre,
+      p.date_heure_arret,
+      p.etat_pointage
+    FROM latest_pointeuse p
+    LEFT JOIN latest_users_fixe uf ON uf.log_user = p.id_serveur
+    WHERE p.chp_date BETWEEN $2::date AND $3::date
+    ORDER BY p.date_heure_demarre DESC
+  `;
+  const rows = await prisma.$queryRawUnsafe<any[]>(sql, clientId, range.from, range.to);
+  return rows.map((r) => {
+    const start: Date = r.date_heure_demarre;
+    const end: Date | null = r.date_heure_arret;
+    const durationMinutes = end ? Math.round((end.getTime() - start.getTime()) / 60000) : null;
+    return {
+      id_pointage: r.id_pointage,
+      employee_name: r.employee_name,
+      chp_date: r.chp_date.toISOString().slice(0, 10),
+      demarre: start.toISOString(),
+      arrete: end ? end.toISOString() : null,
+      duration_minutes: durationMinutes,
+      etat: end ? 'Terminé' : 'En cours',
+    };
+  });
 }

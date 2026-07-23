@@ -25,7 +25,7 @@ const REPORT_ITEMS = [
   // { label: 'Reçus', path: '/dashboard/reports/receipts' },
   // { label: 'Ventes par modificateur', path: '/dashboard/reports/modifiers' },
   // { label: 'Réductions', path: '/dashboard/reports/discounts' },
-  { label: 'Taxes', path: '/dashboard/reports/taxes' },
+  // { label: 'Taxes', path: '/dashboard/reports/taxes' },
   { label: 'Périodes de travail', path: '/dashboard/reports/work-periods' },
 ];
 

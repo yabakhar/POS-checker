@@ -17,6 +17,12 @@ interface Summary {
   revenue_by_category: { category_name: string; revenue: number }[];
 }
 
+interface PaymentMethodRow {
+  method: string;
+  amount: number;
+  pct_of_total: number;
+}
+
 
 const formatMAD = (v: number) => `${Number(v).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} DH`;
 
@@ -25,6 +31,8 @@ export default function DashboardHome() {
   const [dateTo, setDateTo] = useState('');
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethodRow[]>([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,7 +45,19 @@ export default function DashboardHome() {
     finally { setLoading(false); }
   }, [dateFrom, dateTo]);
 
+  const loadPaymentMethods = useCallback(async () => {
+    setPaymentMethodsLoading(true);
+    try {
+      const params = new URLSearchParams({ from: dateFrom });
+      if (dateTo) params.set('to', dateTo);
+      const res = await api.get(`/client/reports/payment-methods?${params.toString()}`);
+      setPaymentMethods(res.data);
+    } catch { /* interceptor handles 401 */ }
+    finally { setPaymentMethodsLoading(false); }
+  }, [dateFrom, dateTo]);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadPaymentMethods(); }, [loadPaymentMethods]);
 
   const onRangeChange = (from: string, to: string) => { setDateFrom(from); setDateTo(to); };
 
@@ -59,6 +79,53 @@ export default function DashboardHome() {
             <KpiCard label="Nombre de tickets" value={summary.kpis.ticket_count.toLocaleString('fr-FR')} sub="Tickets encaissés" />
             <KpiCard label="Panier moyen" value={formatMAD(summary.kpis.avg_ticket)} sub="CA / nombre de tickets" />
           </div>
+
+          <div className="mb-3.5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Mode de paiement</CardTitle>
+                <CardDescription>Répartition des encaissements</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {paymentMethodsLoading ? (
+                  <div className="py-10 text-center text-sm text-muted-foreground">Chargement...</div>
+                ) : (
+                  <CategoryDonut data={paymentMethods.map((r) => ({ category_name: r.method, revenue: r.amount }))} />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Ventes par catégorie</CardTitle>
+                <CardDescription>Répartition du chiffre d'affaires</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CategoryDonut data={summary.revenue_by_category} />
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="mb-3.5">
+            <CardHeader>
+              <CardTitle>C.A. par jour</CardTitle>
+              <CardDescription>Chiffre d'affaires cumulé par jour de la semaine</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{}} className="aspect-auto h-[240px] w-full">
+                <BarChart data={summary.revenue_by_weekday} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="weekday" tick={{ fontSize: 11 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                  <Tooltip
+                    contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--popover-foreground)' }}
+                    formatter={(v: any) => formatMAD(Number(v))}
+                  />
+                  <Bar dataKey="revenue" name="CA" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
 
           <Card className="mb-3.5">
             <CardHeader>
@@ -90,39 +157,6 @@ export default function DashboardHome() {
               )}
             </CardContent>
           </Card>
-
-          <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1.4fr_1fr]">
-            <Card>
-              <CardHeader>
-                <CardTitle>C.A. par jour</CardTitle>
-                <CardDescription>Chiffre d'affaires cumulé par jour de la semaine</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={{}} className="aspect-auto h-[240px] w-full">
-                  <BarChart data={summary.revenue_by_weekday} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="weekday" tick={{ fontSize: 11 }} />
-                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                    <Tooltip
-                      contentStyle={{ background: 'var(--popover)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--popover-foreground)' }}
-                      formatter={(v: any) => formatMAD(Number(v))}
-                    />
-                    <Bar dataKey="revenue" name="CA" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Ventes par catégorie</CardTitle>
-                <CardDescription>Répartition du chiffre d'affaires</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <CategoryDonut data={summary.revenue_by_category} />
-              </CardContent>
-            </Card>
-          </div>
         </>
       )}
     </div>

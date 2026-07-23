@@ -18,11 +18,6 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      # Postgres n'execute ces scripts que sur un volume tout neuf, et
-      # seulement une fois : ca couvre juste le bootstrap initial (001).
-      # Les migrations suivantes (002+) doivent passer par
-      # `npm run db:migrate` (backend/scripts/migrate.js), y compris ici.
-      - ./backend/migrations/001_init.sql:/docker-entrypoint-initdb.d/01-schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
